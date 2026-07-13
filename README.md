@@ -1,5 +1,5 @@
 ## Hi there 👋
-
+https://kaidi0105got-rgb.github.io/kaidi0105got-rgb/
 <!--
 **kaidi0105got-rgb/kaidi0105got-rgb** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
