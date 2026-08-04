@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>張有齡樁基結構分析工具 (含理論示意圖完整修正版)</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --primary: #93c5fd;
+            --primary-light: #60a5fa;
+            --bg-gray: #080d18;
+            --card-bg: #111827;
+            --border-color: #334155;
+            --text-dark: #e5e7eb;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft JhengHei", sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-gray);
+            color: var(--text-dark);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 380px;
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            overflow-y: auto;
+            flex-shrink: 0;
+            box-shadow: 3px 0 18px rgba(0,0,0,0.35);
+        }
+
+        .sidebar h2 {
+            font-size: 1.25rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary-light);
+            margin: 18px 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-dark);
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+            background: #0f172a;
+            color: var(--text-dark);
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-light);
+        }
+
+        .readonly-input {
+            background-color: #1e293b;
+            color: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header {
+            background-color: var(--card-bg);
+            padding: 20px 24px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .diagram-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            padding: 16px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .diagram-card h3 {
+            font-size: 1rem;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #0b1220;
+            border: 1px dashed #475569;
+            border-radius: 8px;
+            padding: 12px;
+            min-height: 250px;
+        }
+
+        .diagram-container svg {
+            max-width: 100%;
+            height: auto;
+            max-height: 290px;
+        }
+
+        .diagram-container svg .txt { fill: #e2e8f0 !important; }
+        .diagram-container svg .txt-sub { fill: #94a3b8 !important; }
+        .diagram-container svg .txt-blue { fill: #60a5fa !important; }
+        .diagram-container svg .txt-green { fill: #4ade80 !important; }
+        .diagram-container svg .line-axis { stroke: #64748b !important; }
+        .diagram-container svg .line-ground { stroke: #cbd5e1 !important; }
+        .diagram-container svg .line-curve { stroke: #60a5fa !important; }
+        .diagram-container svg .line-moment { stroke: #4ade80 !important; }
+        .diagram-container svg .dim-line { stroke: #94a3b8 !important; }
+        .diagram-container svg marker polygon { fill: #94a3b8 !important; }
+        .diagram-container svg text[fill="#dc2626"] { fill: #f87171 !important; }
+
+        * {
+            scrollbar-color: #475569 #0f172a;
+        }
+
+        .formula-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .formula-card h3 {
+            color: var(--primary);
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .formula-note {
+            color: var(--text-muted);
+            font-size: 0.84rem;
+            line-height: 1.65;
+            margin-bottom: 12px;
+        }
+
+        .formula-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+            gap: 10px;
+        }
+
+        .formula-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-left: 3px solid #818cf8;
+            border-radius: 6px;
+            padding: 10px 12px;
+            overflow-x: auto;
+        }
+
+        .formula-item .formula-name {
+            display: block;
+            color: #a5b4fc;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .formula-expression {
+            color: #f8fafc;
+            font-family: "Cambria Math", "Times New Roman", serif;
+            font-size: 1rem;
+            line-height: 1.55;
+            white-space: nowrap;
+        }
+
+        .formula-warning {
+            margin-top: 12px;
+            padding: 9px 11px;
+            border-radius: 6px;
+            background: #29210f;
+            border: 1px solid #854d0e;
+            color: #fde68a;
+            font-size: 0.82rem;
+            line-height: 1.55;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .metric-card {
+            background-color: var(--card-bg);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--primary-light);
+        }
+
+        .metric-card.highlight {
+            border-left: 4px solid #16a34a;
+            background-color: #10261b;
+        }
+
+        .metric-card.limit-service {
+            border-left-color: #38bdf8;
+            background: #0c2433;
+        }
+
+        .metric-card.limit-short {
+            border-left-color: #f59e0b;
+            background: #2a200d;
+        }
+
+        .limit-status {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
+        .limit-status.pass {
+            color: #bbf7d0;
+            background: #14532d;
+        }
+
+        .limit-status.fail {
+            color: #fecaca;
+            background: #7f1d1d;
+        }
+
+        .capacity-note {
+            grid-column: 1 / -1;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            padding: 2px 4px;
+        }
+
+        .metric-card .label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .metric-card .value-container {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .metric-card .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .metric-card .unit {
+            font-size: 0.85rem;
+            color: #60a5fa;
+            font-weight: 600;
+        }
+
+        .charts-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-grow: 1;
+            min-height: 680px;
+            width: 100%;
+        }
+
+        .chart-card {
+            background-color: var(--card-bg);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            max-width: 360px;
+            height: 100%;
+        }
+
+        .chart-card h3 {
+            font-size: 1rem;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            min-height: 600px;
+        }
+
+        @media (max-width: 1200px) {
+            body {
+                flex-direction: column;
+                height: auto;
+                overflow: visible;
+            }
+            .sidebar {
+                width: 100%;
+            }
+            .charts-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .chart-card {
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>張有齡公式分析參數</h2>
+
+        <div class="section-title">1. 樁類型與邊界條件</div>
+        <div class="form-group">
+            <label for="pile_type">樁結構類型</label>
+            <select id="pile_type" onchange="togglePileType(); calculate();">
+                <option value="protruded">突出地面之樁 (h > 0)</option>
+                <option value="embedded">埋入地中之樁 (h = 0)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="condition">樁頂邊界條件</label>
+            <select id="condition" onchange="calculate()">
+                <option value="free">(3) 樁頂自由情形</option>
+                <option value="fixed">(2) 樁頂拘束情形</option>
+            </select>
+        </div>
+
+        <div class="section-title">2. 材料與斷面性質</div>
+        <div class="form-group">
+            <label for="fc">混凝土強度 fc' (kgf/cm²)</label>
+            <input type="number" id="fc" value="280" step="10" oninput="updateE(); calculate()">
+        </div>
+        <div class="form-group">
+            <label for="E">混凝土彈性係數 E (tf/m²)</label>
+            <input type="number" id="E" class="readonly-input" readonly>
+        </div>
+        <div class="form-group">
+            <label for="D">樁徑 D (m)</label>
+            <input type="number" id="D" value="1.0" step="0.05" oninput="updateMomI(); calculate()">
+        </div>
+        <div class="form-group">
+            <label for="I">樁斷面二次矩 I (m⁴)</label>
+            <input type="number" id="I" value="0.049087" step="0.001" oninput="calculate()">
+        </div>
+
+        <div class="section-title">3. 地盤與幾何尺寸</div>
+        <div class="form-group">
+            <label for="K">水平地盤反應係數 K (tf/m³)</label>
+            <input type="number" id="K" value="1500" step="100" oninput="calculate()">
+        </div>
+        <div class="form-group" id="group_h">
+            <label for="h">突出地面高度 h (m)</label>
+            <input type="number" id="h" value="2.0" step="0.1" oninput="calculate()">
+        </div>
+        <div class="form-group">
+            <label for="L_embed">考慮之地中深度 (m)</label>
+            <input type="number" id="L_embed" value="6.0" step="0.5" oninput="calculate()">
+        </div>
+
+        <div class="section-title">4. 外力條件</div>
+        <div class="form-group">
+            <label for="H">樁頂水平作用力 H (tf)</label>
+            <input type="number" id="H" value="10.0" step="1.0" oninput="calculate()">
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1 id="title_main">張有齡公式 — 突出地面之樁 (h > 0) 結構分析</h1>
+            <p>常數 K、半無限長樁模型；深度 z 向下為正，彎矩採 M = -EI·d²y/dz²，剪力採 S = dM/dz。</p>
+        </div>
+
+        <!-- 規範理論示意圖區域 -->
+        <div class="diagram-card">
+            <h3 id="diagram_title">📐 規範理論示範圖 (張有齡基礎設計規範)</h3>
+            <div class="diagram-container" id="diagram_box"></div>
+        </div>
+
+        <div class="formula-card">
+            <h3>📘 張有齡公式 <span id="formula_case"></span></h3>
+            <div class="formula-note">
+                常數水平地盤反應係數 K：β=(KD/4EI)<sup>1/4</sup>。本公式區採原表座標：地表 x=0、地上 −h≤x≤0、地下 x≥0；
+                M₁、S₁、y₁適用於地上段，M₂、S₂、y₂適用於地下段。
+            </div>
+            <div class="formula-grid" id="formula_box"></div>
+            <div class="formula-warning">
+                反正切須選取符合「第一個正深度」的分支；本工具以 atan2 處理。公式僅適用於常數 K、線彈性及半無限長樁假設，不可直接與線性 kh(x) 或非線性 p-y 模型混用。
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="label">剛性因子 β</div>
+                <div class="value-container">
+                    <span class="value" id="out_beta">-</span>
+                    <span class="unit">1/m</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="label">樁頂位移 δ</div>
+                <div class="value-container">
+                    <span class="value" id="out_delta">-</span>
+                    <span class="unit">cm</span>
+                </div>
+            </div>
+            <div class="metric-card limit-service">
+                <div class="label">常時位移限值 δ=1.0 cm 對應水平側力</div>
+                <div class="value-container">
+                    <span class="value" id="out_H_service">-</span>
+                    <span class="unit">tf</span>
+                </div>
+                <span class="limit-status" id="status_H_service">-</span>
+            </div>
+            <div class="metric-card limit-short">
+                <div class="label">短時（風力及地震力）δ=1.5 cm 對應水平側力</div>
+                <div class="value-container">
+                    <span class="value" id="out_H_short">-</span>
+                    <span class="unit">tf</span>
+                </div>
+                <span class="limit-status" id="status_H_short">-</span>
+            </div>
+            <div class="metric-card">
+                <div class="label">地表位移 f</div>
+                <div class="value-container">
+                    <span class="value" id="out_f">-</span>
+                    <span class="unit">cm</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="label">樁頂傾斜角 α</div>
+                <div class="value-container">
+                    <span class="value" id="out_alpha">-</span>
+                    <span class="unit">rad</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="label">樁頂彎矩 M₀</div>
+                <div class="value-container">
+                    <span class="value" id="out_M0">-</span>
+                    <span class="unit">tf-m</span>
+                </div>
+            </div>
+            <div class="metric-card highlight">
+                <div class="label">M₁ 地上段地表彎矩 (z=0)</div>
+                <div class="value-container">
+                    <span class="value" id="out_M1_ground">-</span>
+                    <span class="unit">tf-m</span>
+                </div>
+            </div>
+            <div class="metric-card highlight">
+                <div class="label">M₂ 地中段地表彎矩 (z=0)</div>
+                <div class="value-container">
+                    <span class="value" id="out_M2_ground">-</span>
+                    <span class="unit">tf-m</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="label">地中最大彎矩 Mₘ</div>
+                <div class="value-container">
+                    <span class="value" id="out_Mm">-</span>
+                    <span class="unit">tf-m</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="label">最大彎矩深度 lₘ</div>
+                <div class="value-container">
+                    <span class="value" id="out_lm">-</span>
+                    <span class="unit">m</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="label">第 1 不動點深度 l₁</div>
+                <div class="value-container">
+                    <span class="value" id="out_l1">-</span>
+                    <span class="unit">m</span>
+                </div>
+            </div>
+            <div class="capacity-note">
+                位移控制側力依線彈性比例反算：H<sub>限值</sub>=|H<sub>輸入</sub>|×δ<sub>限值</sub>/|δ<sub>計算</sub>|。此結果僅代表位移控制值，仍須另行檢核樁身強度、地盤承載與群樁效應。
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-card">
+                <h3>位移圖 y (cm)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="chartY"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>剪力圖 S (tf)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="chartS"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>彎矩圖 M₁（地上）／M₂（地下）(tf-m)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="chartM"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartYInstance = null;
+        let chartSInstance = null;
+        let chartMInstance = null;
+
+        function formulaItem(name, expression) {
+            return `<div class="formula-item"><span class="formula-name">${name}</span><div class="formula-expression">${expression}</div></div>`;
+        }
+
+        const formulaSets = {
+            protruded_free: {
+                title: '— 突出樁／樁頂自由',
+                rows: [
+                    ['地上位移 y₁（−h≤x≤0）', 'y₁ = H/(6EIβ³) [β³x³ + 3β³hx² − 3(1+2βh)βx + 3(1+βh)]'],
+                    ['地下位移 y₂（x≥0）', 'y₂ = H/(2EIβ³) e<sup>−βx</sup> [(1+βh)cos(βx) − βh·sin(βx)]'],
+                    ['樁頂位移 δ', 'δ = H[(1+βh)³ + 1/2]/(3EIβ³)'],
+                    ['地表位移 f', 'f = H(1+βh)/(2EIβ³)'],
+                    ['樁頂傾角 α', 'α = H(1+βh)²/(2EIβ²)'],
+                    ['地上彎矩 M₁（−h≤x≤0）', 'M₁ = −H(x+h)'],
+                    ['地下彎矩 M₂（x≥0）', 'M₂ = −H/β · e<sup>−βx</sup> [βh·cos(βx) + (1+βh)sin(βx)]'],
+                    ['剪力 S₁／S₂', 'S₁ = −H；　S₂ = −H e<sup>−βx</sup>[cos(βx) − (1+2βh)sin(βx)]'],
+                    ['邊界與特徵值', 'M₀=0；　lₘ=tan⁻¹[1/(1+2βh)]/β；　l₁=tan⁻¹[(1+βh)/(βh)]/β']
+                ]
+            },
+            protruded_fixed: {
+                title: '— 突出樁／樁頂拘束',
+                rows: [
+                    ['地上位移 y₁（−h≤x≤0）', 'y₁ = H/(12EIβ³) [2β³x³ − 3(1−βh)β²x² − 6β²hx + 3(1+βh)]'],
+                    ['地下位移 y₂（x≥0）', 'y₂ = H/(4EIβ³) e<sup>−βx</sup> [(1+βh)cos(βx) + (1−βh)sin(βx)]'],
+                    ['樁頂位移 δ', 'δ = H[(1+βh)³ + 2]/(12EIβ³)'],
+                    ['地表位移 f', 'f = H(1+βh)/(4EIβ³)'],
+                    ['樁頂傾角 α', 'α = 0'],
+                    ['地上彎矩 M₁（−h≤x≤0）', 'M₁ = H/(2β) [−2βx + (1−βh)]'],
+                    ['地下彎矩 M₂（x≥0）', 'M₂ = H/(2β) e<sup>−βx</sup> [(1−βh)cos(βx) − (1+βh)sin(βx)]'],
+                    ['剪力 S₁／S₂', 'S₁ = −H；　S₂ = −H e<sup>−βx</sup>[cos(βx) − βh·sin(βx)]'],
+                    ['邊界與特徵值', 'M₀=H(1+βh)/(2β)；　lₘ=tan⁻¹[1/(βh)]/β；　l₁採第一正根']
+                ]
+            },
+            embedded_free: {
+                title: '— 埋入樁／樁頂自由',
+                rows: [
+                    ['適用範圍', 'h=0，無地上段 y₁、M₁、S₁；以下 x≥0'],
+                    ['地下位移 y₂', 'y₂ = H/(2EIβ³) e<sup>−βx</sup> cos(βx)'],
+                    ['位移與傾角', 'δ=f=H/(2EIβ³)；　α=H/(2EIβ²)'],
+                    ['地下彎矩 M₂', 'M₂ = −H/β · e<sup>−βx</sup> sin(βx)'],
+                    ['地下剪力 S₂', 'S₂ = −H e<sup>−βx</sup>[cos(βx)−sin(βx)]'],
+                    ['邊界與特徵值', 'M₀=0；　lₘ=π/(4β)；　Mₘ=−0.3224H/β；　l₁=π/(2β)']
+                ]
+            },
+            embedded_fixed: {
+                title: '— 埋入樁／樁頂拘束',
+                rows: [
+                    ['適用範圍', 'h=0，無地上段 y₁、M₁、S₁；以下 x≥0'],
+                    ['地下位移 y₂', 'y₂ = H/(4EIβ³) e<sup>−βx</sup>[cos(βx)+sin(βx)]'],
+                    ['位移與傾角', 'δ=f=H/(4EIβ³)；　α=0'],
+                    ['地下彎矩 M₂', 'M₂ = H/(2β) e<sup>−βx</sup>[cos(βx)−sin(βx)]'],
+                    ['地下剪力 S₂', 'S₂ = −H e<sup>−βx</sup> cos(βx)'],
+                    ['邊界與特徵值', 'M₀=H/(2β)；　lₘ=π/(2β)；　Mₘ=−H e<sup>−π/2</sup>/(2β)；　l₁=3π/(4β)']
+                ]
+            }
+        };
+
+        function updateFormulaPanel() {
+            const key = `${document.getElementById('pile_type').value}_${document.getElementById('condition').value}`;
+            const set = formulaSets[key];
+            document.getElementById('formula_case').innerText = set.title;
+            document.getElementById('formula_box').innerHTML = set.rows.map(([name, expression]) => formulaItem(name, expression)).join('');
+        }
+
+        // 理論示意圖 SVG 庫 (已修正突出地面自由與拘束之彎矩趨勢)
+        const svgDiagrams = {
+            'protruded_free': `
+            <svg viewBox="0 0 520 230" width="520" height="230" xmlns="http://www.w3.org/2000/svg">
+                <style>
+                    .txt { font-family: sans-serif; font-size: 12px; fill: #0f172a; }
+                    .txt-sub { font-size: 11px; fill: #64748b; }
+                    .txt-blue { font-size: 12px; fill: #2563eb; font-weight: bold; }
+                    .txt-green { font-size: 12px; fill: #16a34a; font-weight: bold; }
+                    .line-axis { stroke: #94a3b8; stroke-width: 1; stroke-dasharray: 4,4; }
+                    .line-ground { stroke: #334155; stroke-width: 2.5; }
+                    .line-curve { stroke: #2563eb; stroke-width: 2; fill: none; }
+                    .line-moment { stroke: #16a34a; stroke-width: 2; fill: none; }
+                    .arrow-red { fill: #dc2626; }
+                    .dim-line { stroke: #475569; stroke-width: 1.2; marker-end: url(#arrowhead); marker-start: url(#arrowhead-start); }
+                </style>
+                <defs>
+                    <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                        <polygon points="0 0, 6 3, 0 6" fill="#475569" />
+                    </marker>
+                    <marker id="arrowhead-start" markerWidth="6" markerHeight="6" refX="1" refY="3" orient="auto">
+                        <polygon points="6 0, 0 3, 6 6" fill="#475569" />
+                    </marker>
+                </defs>
+
+                <line x1="40" y1="90" x2="480" y2="90" class="line-ground"/>
+                <path d="M 50,90 L 40,100 M 90,90 L 80,100 M 130,90 L 120,100 M 170,90 L 160,100 M 210,90 L 200,100 M 250,90 L 240,100 M 290,90 L 280,100 M 330,90 L 320,100 M 370,90 L 360,100 M 410,90 L 400,100 M 450,90 L 440,100" stroke="#cbd5e1" stroke-width="1.5"/>
+                
+                <line x1="130" y1="20" x2="130" y2="210" class="line-axis"/>
+                <line x1="380" y1="20" x2="380" y2="210" class="line-axis"/>
+
+                <text x="80" y="22" class="txt-blue">(y1) 位移圖</text>
+                <line x1="80" y1="35" x2="125" y2="35" stroke="#dc2626" stroke-width="2"/>
+                <polygon points="125,31 133,35 125,39" class="arrow-red"/>
+                <text x="95" y="30" class="txt" fill="#dc2626" font-weight="bold">H</text>
+                
+                <path d="M 160,35 Q 138,60 130,90 Q 122,125 130,150 Q 133,170 130,210" class="line-curve"/>
+                <line x1="130" y1="35" x2="160" y2="35" stroke="#2563eb" stroke-dasharray="2,2"/>
+                <text x="142" y="28" class="txt-blue">δ</text>
+                <text x="135" y="85" class="txt-blue">f</text>
+
+                <line x1="55" y1="35" x2="55" y2="90" class="dim-line"/>
+                <text x="42" y="65" class="txt-sub">h</text>
+                <line x1="55" y1="90" x2="55" y2="210" class="dim-line"/>
+                <text x="42" y="155" class="txt-sub" font-weight="bold">L</text>
+
+                <text x="320" y="22" class="txt-green">彎矩圖 M₁／M₂</text>
+                <text x="392" y="58" class="txt-green">M₁ 地上段</text>
+                <text x="392" y="73" class="txt-sub">−h ≤ x ≤ 0</text>
+                <text x="392" y="108" class="txt-green">M₂ 地下段</text>
+                <text x="392" y="123" class="txt-sub">x ≥ 0</text>
+                <text x="205" y="84" class="txt" font-weight="bold">x=0 地表分界</text>
+                <!-- 自由樁頂 M0=0；地上段至地表為負，地中段先達負最大值再衰減。 -->
+                <path d="M 380,35 L 340,90 Q 315,110 300,135 Q 330,165 390,185 Q 385,200 380,210" class="line-moment"/>
+                <text x="250" y="90" class="txt-green">M地表 = -H*h</text>
+                <text x="245" y="135" class="txt-green">(-) Mm</text>
+
+                <line x1="450" y1="90" x2="450" y2="135" class="dim-line"/>
+                <text x="455" y="115" class="txt-green" font-weight="bold">lm</text>
+                <line x1="380" y1="135" x2="455" y2="135" stroke="#16a34a" stroke-dasharray="2,2"/>
+            </svg>`,
+
+            'protruded_fixed': `
+            <svg viewBox="0 0 520 230" width="520" height="230" xmlns="http://www.w3.org/2000/svg">
+                <style>
+                    .txt { font-family: sans-serif; font-size: 12px; fill: #0f172a; }
+                    .txt-sub { font-size: 11px; fill: #64748b; }
+                    .txt-blue { font-size: 12px; fill: #2563eb; font-weight: bold; }
+                    .txt-green { font-size: 12px; fill: #16a34a; font-weight: bold; }
+                    .line-axis { stroke: #94a3b8; stroke-width: 1; stroke-dasharray: 4,4; }
+                    .line-ground { stroke: #334155; stroke-width: 2.5; }
+                    .line-curve { stroke: #2563eb; stroke-width: 2; fill: none; }
+                    .line-moment { stroke: #16a34a; stroke-width: 2; fill: none; }
+                    .arrow-red { fill: #dc2626; }
+                    .dim-line { stroke: #475569; stroke-width: 1.2; marker-end: url(#arrowhead); marker-start: url(#arrowhead-start); }
+                </style>
+                <defs>
+                    <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                        <polygon points="0 0, 6 3, 0 6" fill="#475569" />
+                    </marker>
+                    <marker id="arrowhead-start" markerWidth="6" markerHeight="6" refX="1" refY="3" orient="auto">
+                        <polygon points="6 0, 0 3, 6 6" fill="#475569" />
+                    </marker>
+                </defs>
+
+                <line x1="40" y1="90" x2="480" y2="90" class="line-ground"/>
+                <path d="M 50,90 L 40,100 M 90,90 L 80,100 M 130,90 L 120,100 M 170,90 L 160,100 M 210,90 L 200,100 M 250,90 L 240,100 M 290,90 L 280,100 M 330,90 L 320,100 M 370,90 L 360,100 M 410,90 L 400,100 M 450,90 L 440,100" stroke="#cbd5e1" stroke-width="1.5"/>
+                
+                <line x1="130" y1="20" x2="130" y2="210" class="line-axis"/>
+                <line x1="380" y1="20" x2="380" y2="210" class="line-axis"/>
+
+                <text x="70" y="22" class="txt-blue">(y1) 位移圖 (樁頂拘束)</text>
+                <line x1="80" y1="35" x2="125" y2="35" stroke="#dc2626" stroke-width="2"/>
+                <polygon points="125,31 133,35 125,39" class="arrow-red"/>
+                <text x="95" y="30" class="txt" fill="#dc2626" font-weight="bold">H</text>
+
+                <path d="M 155,35 C 155,60 142,78 130,90 Q 122,125 130,150 Q 133,170 130,210" class="line-curve"/>
+                <line x1="130" y1="35" x2="155" y2="35" stroke="#2563eb" stroke-dasharray="2,2"/>
+                <text x="140" y="28" class="txt-blue">δ</text>
+                <text x="135" y="85" class="txt-blue">f</text>
+
+                <line x1="55" y1="35" x2="55" y2="90" class="dim-line"/>
+                <text x="42" y="65" class="txt-sub">h</text>
+                <line x1="55" y1="90" x2="55" y2="210" class="dim-line"/>
+                <text x="42" y="155" class="txt-sub" font-weight="bold">L</text>
+
+                <text x="320" y="22" class="txt-green">彎矩圖 M₁／M₂</text>
+                <text x="392" y="58" class="txt-green">M₁ 地上段</text>
+                <text x="392" y="73" class="txt-sub">−h ≤ x ≤ 0</text>
+                <text x="392" y="108" class="txt-green">M₂ 地下段</text>
+                <text x="392" y="123" class="txt-sub">x ≥ 0</text>
+                <text x="205" y="84" class="txt" font-weight="bold">x=0 地表分界</text>
+                <!-- 拘束樁頂 M0>0；地表彎矩隨 βh 可正可負，地中第一極值為負。 -->
+                <path d="M 420,35 L 390,90 Q 350,110 315,135 Q 345,165 390,185 Q 385,200 380,210" class="line-moment"/>
+                <text x="425" y="40" class="txt-green">(+) M₀</text>
+                <text x="245" y="90" class="txt-green">M地表依 βh 可±</text>
+                <text x="265" y="135" class="txt-green">(-) Mm</text>
+
+                <line x1="450" y1="90" x2="450" y2="135" class="dim-line"/>
+                <text x="455" y="115" class="txt-green" font-weight="bold">lm</text>
+                <line x1="380" y1="135" x2="455" y2="135" stroke="#16a34a" stroke-dasharray="2,2"/>
+            </svg>`,
+
+            'embedded_free': `
+            <svg viewBox="0 0 520 230" width="520" height="230" xmlns="http://www.w3.org/2000/svg">
+                <style>
+                    .txt { font-family: sans-serif; font-size: 12px; fill: #0f172a; }
+                    .txt-sub { font-size: 11px; fill: #64748b; }
+                    .txt-blue { font-size: 12px; fill: #2563eb; font-weight: bold; }
+                    .txt-green { font-size: 12px; fill: #16a34a; font-weight: bold; }
+                    .line-axis { stroke: #94a3b8; stroke-width: 1; stroke-dasharray: 4,4; }
+                    .line-ground { stroke: #334155; stroke-width: 2.5; }
+                    .line-curve { stroke: #2563eb; stroke-width: 2; fill: none; }
+                    .line-moment { stroke: #16a34a; stroke-width: 2; fill: none; }
+                    .arrow-red { fill: #dc2626; }
+                    .dim-line { stroke: #475569; stroke-width: 1.2; marker-end: url(#arrowhead); marker-start: url(#arrowhead-start); }
+                </style>
+                <defs>
+                    <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                        <polygon points="0 0, 6 3, 0 6" fill="#475569" />
+                    </marker>
+                    <marker id="arrowhead-start" markerWidth="6" markerHeight="6" refX="1" refY="3" orient="auto">
+                        <polygon points="6 0, 0 3, 6 6" fill="#475569" />
+                    </marker>
+                </defs>
+
+                <line x1="40" y1="45" x2="480" y2="45" class="line-ground"/>
+                <path d="M 50,45 L 40,55 M 90,45 L 80,55 M 130,45 L 120,55 M 170,45 L 160,55 M 210,45 L 200,55 M 250,45 L 240,55 M 290,45 L 280,55 M 330,45 L 320,55 M 370,45 L 360,55 M 410,45 L 400,55 M 450,45 L 440,55" stroke="#cbd5e1" stroke-width="1.5"/>
+                
+                <line x1="130" y1="20" x2="130" y2="210" class="line-axis"/>
+                <line x1="380" y1="20" x2="380" y2="210" class="line-axis"/>
+
+                <text x="60" y="22" class="txt-blue">埋入地中 (h=0) 樁頂自由</text>
+                <line x1="80" y1="45" x2="125" y2="45" stroke="#dc2626" stroke-width="2"/>
+                <polygon points="125,41 133,45 125,49" class="arrow-red"/>
+                <text x="95" y="38" class="txt" fill="#dc2626" font-weight="bold">H</text>
+
+                <path d="M 160,45 Q 120,95 130,140 Q 134,170 130,210" class="line-curve"/>
+                <line x1="130" y1="45" x2="160" y2="45" stroke="#2563eb" stroke-dasharray="2,2"/>
+                <text x="142" y="38" class="txt-blue">δ = f</text>
+                <path d="M 130,65 A 20,20 0 0 1 145,62" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+                <text x="142" y="58" class="txt-blue">α</text>
+
+                <line x1="55" y1="45" x2="55" y2="210" class="dim-line"/>
+                <text x="42" y="130" class="txt-sub" font-weight="bold">L</text>
+
+                <text x="310" y="22" class="txt-green">M₂ 地下段彎矩圖 (M₀=0)</text>
+                <text x="395" y="62" class="txt-sub">h=0，無 M₁ 地上段</text>
+                <text x="200" y="39" class="txt" font-weight="bold">x=0 樁頂／地表</text>
+                <path d="M 380,45 Q 325,95 380,140 Q 395,170 380,210" class="line-moment"/>
+                <text x="275" y="95" class="txt-green">(-) Mm</text>
+
+                <line x1="450" y1="45" x2="450" y2="95" class="dim-line"/>
+                <text x="455" y="75" class="txt-green" font-weight="bold">lm</text>
+                <line x1="380" y1="95" x2="455" y2="95" stroke="#16a34a" stroke-dasharray="2,2"/>
+            </svg>`,
+
+            'embedded_fixed': `
+            <svg viewBox="0 0 520 230" width="520" height="230" xmlns="http://www.w3.org/2000/svg">
+                <style>
+                    .txt { font-family: sans-serif; font-size: 12px; fill: #0f172a; }
+                    .txt-sub { font-size: 11px; fill: #64748b; }
+                    .txt-blue { font-size: 12px; fill: #2563eb; font-weight: bold; }
+                    .txt-green { font-size: 12px; fill: #16a34a; font-weight: bold; }
+                    .line-axis { stroke: #94a3b8; stroke-width: 1; stroke-dasharray: 4,4; }
+                    .line-ground { stroke: #334155; stroke-width: 2.5; }
+                    .line-curve { stroke: #2563eb; stroke-width: 2; fill: none; }
+                    .line-moment { stroke: #16a34a; stroke-width: 2; fill: none; }
+                    .arrow-red { fill: #dc2626; }
+                    .dim-line { stroke: #475569; stroke-width: 1.2; marker-end: url(#arrowhead); marker-start: url(#arrowhead-start); }
+                </style>
+                <defs>
+                    <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                        <polygon points="0 0, 6 3, 0 6" fill="#475569" />
+                    </marker>
+                    <marker id="arrowhead-start" markerWidth="6" markerHeight="6" refX="1" refY="3" orient="auto">
+                        <polygon points="6 0, 0 3, 6 6" fill="#475569" />
+                    </marker>
+                </defs>
+
+                <line x1="40" y1="45" x2="480" y2="45" class="line-ground"/>
+                <path d="M 50,45 L 40,55 M 90,45 L 80,55 M 130,45 L 120,55 M 170,45 L 160,55 M 210,45 L 200,55 M 250,45 L 240,55 M 290,45 L 280,55 M 330,45 L 320,55 M 370,45 L 360,55 M 410,45 L 400,55 M 450,45 L 440,55" stroke="#cbd5e1" stroke-width="1.5"/>
+                
+                <line x1="130" y1="20" x2="130" y2="210" class="line-axis"/>
+                <line x1="380" y1="20" x2="380" y2="210" class="line-axis"/>
+
+                <text x="60" y="22" class="txt-blue">埋入地中 (h=0) 樁頂拘束</text>
+                <line x1="80" y1="45" x2="125" y2="45" stroke="#dc2626" stroke-width="2"/>
+                <polygon points="125,41 133,45 125,49" class="arrow-red"/>
+                <text x="95" y="38" class="txt" fill="#dc2626" font-weight="bold">H</text>
+
+                <path d="M 155,45 C 155,70 120,95 130,140 Q 134,170 130,210" class="line-curve"/>
+                <line x1="130" y1="45" x2="155" y2="45" stroke="#2563eb" stroke-dasharray="2,2"/>
+                <text x="140" y="38" class="txt-blue">δ = f</text>
+
+                <line x1="55" y1="45" x2="55" y2="210" class="dim-line"/>
+                <text x="42" y="130" class="txt-sub" font-weight="bold">L</text>
+
+                <text x="325" y="22" class="txt-green">M₂ 地下段彎矩圖</text>
+                <text x="395" y="72" class="txt-sub">h=0，無 M₁ 地上段</text>
+                <text x="200" y="39" class="txt" font-weight="bold">x=0 樁頂／地表</text>
+                <path d="M 430,45 Q 325,95 380,140 Q 395,170 380,210" class="line-moment"/>
+                <text x="435" y="55" class="txt-green">(+) M₀</text>
+                <text x="275" y="95" class="txt-green">(-) Mm</text>
+
+                <line x1="450" y1="45" x2="450" y2="95" class="dim-line"/>
+                <text x="455" y="75" class="txt-green" font-weight="bold">lm</text>
+                <line x1="380" y1="95" x2="455" y2="95" stroke="#16a34a" stroke-dasharray="2,2"/>
+            </svg>`
+        };
+
+        function updateDiagram() {
+            const pileType = document.getElementById('pile_type').value;
+            const cond = document.getElementById('condition').value;
+            const diagramBox = document.getElementById('diagram_box');
+            const diagramTitle = document.getElementById('diagram_title');
+
+            let key = `${pileType}_${cond}`;
+            diagramBox.innerHTML = svgDiagrams[key] || svgDiagrams['protruded_free'];
+
+            const condText = (cond === 'free') ? '(3) 樁頂自由情形' : '(2) 樁頂拘束情形';
+            const typeText = (pileType === 'protruded') ? '突出地面之樁 (h > 0)' : '埋入地中之樁 (h = 0)';
+            diagramTitle.innerText = `📐 規範理論示範圖 — ${typeText} / ${condText}`;
+            updateFormulaPanel();
+        }
+
+        function updateE() {
+            const fc = parseFloat(document.getElementById('fc').value);
+            if (fc > 0) {
+                const E_tf_m2 = 120000 * Math.sqrt(fc);
+                document.getElementById('E').value = E_tf_m2.toFixed(1);
+            }
+        }
+
+        function updateMomI() {
+            const D = parseFloat(document.getElementById('D').value);
+            if (D > 0) {
+                const I = (Math.PI * Math.pow(D, 4)) / 64;
+                document.getElementById('I').value = I.toFixed(6);
+            }
+        }
+
+        function togglePileType() {
+            const pileType = document.getElementById('pile_type').value;
+            const groupH = document.getElementById('group_h');
+            const mainTitle = document.getElementById('title_main');
+
+            if (pileType === 'embedded') {
+                groupH.style.display = 'none';
+                mainTitle.innerText = '張有齡公式 — 埋入地中之樁 (h = 0) 結構分析';
+            } else {
+                groupH.style.display = 'block';
+                mainTitle.innerText = '張有齡公式 — 突出地面之樁 (h > 0) 結構分析';
+            }
+            updateDiagram();
+        }
+
+        // 求 C cos(t) + D sin(t) = 0 的第一個正根（0 < t <= π）。
+        // 使用 atan2 並處理分支，避免直接 atan 在 βh < 1 時產生負深度。
+        function firstPositiveHarmonicZero(C, D) {
+            let t = Math.atan2(-C, D);
+            while (t <= 1e-12) t += Math.PI;
+            return t;
+        }
+
+        function updateDisplacementLimitResult(valueId, statusId, limitForce, currentForce, limitCm) {
+            const valueElement = document.getElementById(valueId);
+            const statusElement = document.getElementById(statusId);
+            valueElement.innerText = limitForce.toFixed(3);
+
+            const isPass = Math.abs(currentForce) <= limitForce + 1e-12;
+            statusElement.innerText = isPass
+                ? `目前 |H|=${Math.abs(currentForce).toFixed(3)} tf：符合 δ≤${limitCm.toFixed(1)} cm`
+                : `目前 |H|=${Math.abs(currentForce).toFixed(3)} tf：超過 δ=${limitCm.toFixed(1)} cm 控制值`;
+            statusElement.className = `limit-status ${isPass ? 'pass' : 'fail'}`;
+        }
+
+        function calculate() {
+            updateDiagram();
+
+            const pileType = document.getElementById('pile_type').value;
+            const cond = document.getElementById('condition').value;
+            const E = parseFloat(document.getElementById('E').value);
+            const D = parseFloat(document.getElementById('D').value);
+            const I = parseFloat(document.getElementById('I').value);
+            const K = parseFloat(document.getElementById('K').value);
+            let h = (pileType === 'embedded') ? 0.0 : parseFloat(document.getElementById('h').value);
+            const L_embed = parseFloat(document.getElementById('L_embed').value);
+            const H = parseFloat(document.getElementById('H').value);
+
+            if (!E || !D || !I || !K || h < 0 || L_embed <= 0 || !H) return;
+
+            const beta = Math.pow((K * D) / (4 * E * I), 0.25);
+            const bh = beta * h;
+
+            let delta_m, f_m, alpha, M0, lm, Mm, l1;
+            let calc_y1, calc_M1, calc_S1, calc_y2, calc_M2, calc_S2;
+            let M1_ground = 0;
+            let M2_ground = 0;
+
+            if (pileType === 'embedded') {
+                if (cond === 'free') {
+                    delta_m = H / (2 * E * I * Math.pow(beta, 3));
+                    f_m = delta_m;
+                    alpha = H / (2 * E * I * Math.pow(beta, 2));
+                    M0 = 0.0;
+
+                    lm = Math.PI / (4 * beta);
+                    Mm = - (H / (2 * beta)) * Math.sqrt(2) * Math.exp(- Math.PI / 4);
+                    l1 = Math.PI / (2 * beta);
+
+                    M1_ground = 0.0;
+                    M2_ground = 0.0;
+
+                    calc_y1 = null; calc_M1 = null; calc_S1 = null;
+
+                    calc_y2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return (H / (2 * E * I * Math.pow(beta, 3))) * Math.exp(-bx) * Math.cos(bx);
+                    };
+                    calc_M2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return - (H / beta) * Math.exp(-bx) * Math.sin(bx);
+                    };
+                    calc_S2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return - H * Math.exp(-bx) * (Math.cos(bx) - Math.sin(bx));
+                    };
+                } else {
+                    delta_m = H / (4 * E * I * Math.pow(beta, 3));
+                    f_m = delta_m;
+                    alpha = 0.0;
+                    M0 = H / (2 * beta);
+
+                    lm = Math.PI / (2 * beta);
+                    Mm = - (H / (2 * beta)) * Math.exp(- Math.PI / 2);
+                    l1 = (3 * Math.PI) / (4 * beta);
+
+                    M1_ground = M0;
+                    M2_ground = M0;
+
+                    calc_y1 = null; calc_M1 = null; calc_S1 = null;
+
+                    calc_y2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return (H / (4 * E * I * Math.pow(beta, 3))) * Math.exp(-bx) * (Math.cos(bx) + Math.sin(bx));
+                    };
+                    calc_M2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return (H / (2 * beta)) * Math.exp(-bx) * (Math.cos(bx) - Math.sin(bx));
+                    };
+                    calc_S2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return - H * Math.exp(-bx) * Math.cos(bx);
+                    };
+                }
+            } else {
+                // 突出地面之樁 (h > 0)
+                if (cond === 'free') {
+                    // (3) 樁頂自由情形
+                    delta_m = ((Math.pow(1 + bh, 3) + 0.5) / (3 * E * I * Math.pow(beta, 3))) * H;
+                    f_m = ((1 + bh) / (2 * E * I * Math.pow(beta, 3))) * H;
+                    alpha = (Math.pow(1 + bh, 2) / (2 * E * I * Math.pow(beta, 2))) * H;
+                    M0 = 0.0;
+
+                    lm = (1.0 / beta) * Math.atan(1.0 / (1.0 + 2.0 * bh));
+                    l1 = firstPositiveHarmonicZero(1 + bh, -bh) / beta;
+
+                    M1_ground = - H * h;
+                    M2_ground = - H * h;
+
+                    // 地上段：x 為從樁頂向下之距離 (0 <= x <= h)。
+                    // y1 = δ - αx + Hx³/(6EI)，可同時滿足 M(0)=0、S=-H 與地表連續。
+                    calc_y1 = function(x) {
+                        return delta_m - alpha * x + (H / (6 * E * I)) * Math.pow(x, 3);
+                    };
+                    calc_M1 = function(x) {
+                        return - H * x;
+                    };
+                    calc_S1 = function(x) {
+                        return - H;
+                    };
+
+                    // 地中段：x_g 為從地表向下之深度 (x_g >= 0)
+                    calc_y2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return (H / (2 * E * I * Math.pow(beta, 3))) * Math.exp(-bx) * (
+                            (1 + bh) * Math.cos(bx) - bh * Math.sin(bx)
+                        );
+                    };
+                    calc_M2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return - (H / beta) * Math.exp(-bx) * (
+                            bh * Math.cos(bx) + (1 + bh) * Math.sin(bx)
+                        );
+                    };
+                    calc_S2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return - H * Math.exp(-bx) * (
+                            Math.cos(bx) - (1 + 2 * bh) * Math.sin(bx)
+                        );
+                    };
+                    Mm = calc_M2(lm);
+                } else {
+                    // (2) 樁頂拘束情形
+                    delta_m = ((Math.pow(1 + bh, 3) + 2.0) / (12 * E * I * Math.pow(beta, 3))) * H;
+                    f_m = ((1 + bh) / (4 * E * I * Math.pow(beta, 3))) * H;
+                    alpha = 0.0;
+                    M0 = (H / (2 * beta)) * (1 + bh);
+
+                    lm = Math.atan2(1.0, bh) / beta;
+                    l1 = firstPositiveHarmonicZero(1 + bh, 1 - bh) / beta;
+
+                    M1_ground = M0 - H * h;
+                    M2_ground = (H / (2 * beta)) * (1 - bh);
+
+                    // 地上段：樁頂轉角為零；由 M=-EIy'' 與 S=dM/dx=-H 積分。
+                    calc_y1 = function(x) {
+                        return delta_m - (M0 / (2 * E * I)) * Math.pow(x, 2) + (H / (6 * E * I)) * Math.pow(x, 3);
+                    };
+                    calc_M1 = function(x) {
+                        return M0 - H * x;
+                    };
+                    calc_S1 = function(x) {
+                        return - H;
+                    };
+
+                    // 地中段：x_g 為從地表向下之深度 (x_g >= 0)
+                    calc_y2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return (H / (4 * E * I * Math.pow(beta, 3))) * Math.exp(-bx) * (
+                            (1 + bh) * Math.cos(bx) + (1 - bh) * Math.sin(bx)
+                        );
+                    };
+                    calc_M2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return (H / (2 * beta)) * Math.exp(-bx) * (
+                            (1 - bh) * Math.cos(bx) - (1 + bh) * Math.sin(bx)
+                        );
+                    };
+                    calc_S2 = function(x_g) {
+                        const bx = beta * x_g;
+                        return - H * Math.exp(-bx) * (
+                            Math.cos(bx) - bh * Math.sin(bx)
+                        );
+                    };
+                    Mm = calc_M2(lm);
+                }
+            }
+
+            const delta_cm = delta_m * 100.0;
+            const f_cm = f_m * 100.0;
+            const complianceCmPerTf = Math.abs(delta_cm) / Math.abs(H);
+            const H_service = 1.0 / complianceCmPerTf;
+            const H_short = 1.5 / complianceCmPerTf;
+
+            document.getElementById('out_beta').innerText = beta.toFixed(4);
+            document.getElementById('out_delta').innerText = delta_cm.toFixed(3);
+            updateDisplacementLimitResult('out_H_service', 'status_H_service', H_service, H, 1.0);
+            updateDisplacementLimitResult('out_H_short', 'status_H_short', H_short, H, 1.5);
+            document.getElementById('out_f').innerText = f_cm.toFixed(3);
+            document.getElementById('out_alpha').innerText = alpha.toFixed(6);
+            document.getElementById('out_M0').innerText = M0.toFixed(3);
+            document.getElementById('out_M1_ground').innerText = M1_ground.toFixed(3);
+            document.getElementById('out_M2_ground').innerText = M2_ground.toFixed(3);
+            document.getElementById('out_Mm').innerText = Mm.toFixed(3);
+            document.getElementById('out_lm').innerText = lm.toFixed(3);
+            document.getElementById('out_l1').innerText = l1.toFixed(3);
+
+            const ptsY = [];
+            const ptsS = [];
+            const ptsM = [];
+
+            // 1. 地上段點位產生 (z 從 -h 到 0)
+            if (pileType === 'protruded' && h > 0) {
+                const num1 = 50;
+                for (let i = 0; i < num1; i++) { // 不包含 i = num1 (避免地表點重複疊加)
+                    const x = (h * i) / num1;    // x: 0 (樁頂) -> h (地表)
+                    const z = x - h;             // z: -h -> 0
+
+                    ptsY.push({ x: calc_y1(x) * 100.0, y: z });
+                    ptsS.push({ x: calc_S1(x), y: z });
+                    ptsM.push({ x: calc_M1(x), y: z });
+                }
+            }
+
+            // 2. 地中段點位產生 (z 從 0 到 L_embed)
+            const num2 = 200;
+            for (let i = 0; i <= num2; i++) {
+                const x_g = (L_embed * i) / num2;
+                const z = x_g;
+
+                ptsY.push({ x: calc_y2(x_g) * 100.0, y: z });
+                ptsS.push({ x: calc_S2(x_g), y: z });
+                ptsM.push({ x: calc_M2(x_g), y: z });
+            }
+
+            renderChart('chartY', chartYInstance, ptsY, '位移 y (cm)', '#60a5fa', (inst) => chartYInstance = inst);
+            renderChart('chartS', chartSInstance, ptsS, '剪力 S (tf)', '#f87171', (inst) => chartSInstance = inst);
+            renderChart('chartM', chartMInstance, ptsM, '彎矩 M (tf-m)', '#4ade80', (inst) => chartMInstance = inst);
+        }
+
+        function renderChart(canvasId, chartInstance, dataPoints, label, color, setInstance) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const newChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: label,
+                        data: dataPoints,
+                        showLine: true,
+                        borderColor: color,
+                        backgroundColor: color,
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: label,
+                                color: '#cbd5e1'
+                            },
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(100, 116, 139, 0.28)' },
+                            border: { color: '#64748b' }
+                        },
+                        y: {
+                            type: 'linear',
+                            reverse: true, // 深度向下為正
+                            title: {
+                                display: true,
+                                text: '高程/深度 z (m) [負值為地上, 0為地面]',
+                                color: '#cbd5e1'
+                            },
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(100, 116, 139, 0.28)' },
+                            border: { color: '#64748b' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#020617',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#e2e8f0',
+                            borderColor: '#475569',
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+
+            setInstance(newChart);
+        }
+
+        window.onload = function() {
+            updateE();
+            togglePileType();
+            calculate();
+        };
+    </script>
+</body>
+</html>
